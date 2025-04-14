@@ -4,7 +4,7 @@ use anchor_lang::prelude::*;
 #[derive(InitSpace)]
 pub struct PoolConfig {
     pub owner: Pubkey,
-    pub stake_token_ming: Pubkey,
+    pub stake_token_mint: Pubkey,
     pub stake_token_vault: Pubkey,
     pub min_duration: u64,
     pub max_duration: u64,

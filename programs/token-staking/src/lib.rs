@@ -2,8 +2,12 @@ use anchor_lang::prelude::*;
 
 pub mod state;
 pub mod instructions;
+pub mod handlers;
 
 use instructions::pool_create::*;
+use instructions::stake_tokens::*;
+
+use handlers::*;
 
 declare_id!("14cNesu4Fnme8M6wqK5GMJWygsXYbQuae4KbyBp9aBNW");
 
@@ -19,8 +23,13 @@ pub mod token_staking {
 
     // *** pool owner instructions
 
-    pub fn pool_create(ctx: Context<PoolCreate>) -> Result<()> {
-        Ok(())
+    pub fn pool_create(
+        ctx: Context<PoolCreate>,
+        min_duration: u64,
+        max_duration: u64,
+        max_wight_multiplier: u64,
+    ) -> Result<()> {
+        pool_create::handle(ctx, min_duration, max_duration, max_wight_multiplier)
     }
 
     // pub fn pool_deposit(ctx: Context<PoolDeposit>) -> Result<()> {
