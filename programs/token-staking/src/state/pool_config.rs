@@ -5,7 +5,7 @@ use anchor_lang::prelude::*;
 pub struct PoolConfig {
     pub owner: Pubkey,
     pub stake_token_mint: Pubkey,
-    pub stake_token_vault: Pubkey,
+    pub stake_token_vault: Pubkey, // TODO: remove not need to save it it is ATA : 
     pub min_duration: u64,
     pub max_duration: u64,
     pub max_wight_multiplier: u64,

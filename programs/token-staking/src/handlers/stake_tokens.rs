@@ -1,8 +1,9 @@
 use std::borrow::{Borrow, BorrowMut};
 
 use anchor_lang::prelude::*;
+use anchor_spl::token;
 
-use crate::{instructions::stake_tokens::StakeTokens, state::{pool_config::{self, PoolConfig}, user_stake::{self, UserStake}}, utils::errors::StakeProgramErrors};
+use crate::{instructions::stake_tokens::StakeTokens, state::{pool_config::PoolConfig, user_stake::UserStake}, utils::errors::StakeProgramErrors};
 
 // Basis Points (Bips) its a 0.01% or 0.0001
 pub const BIPS: u64 = 10_000;
@@ -26,11 +27,21 @@ pub fn handler(
     user_stake.set_inner(UserStake {
         owner: ctx.accounts.user.key(),
         pool_config: ctx.accounts.pool_config.key(),
-        stake_token_vault: ctx.accounts.stake_token_vault.key(),
         start_time: lock_period_start,
         end_time: lock_period_start + lockup_period,
         weight_multiplier: user_weight_multiplier
     });
+
+    let token_transfer_ctx = CpiContext::new(
+        ctx.accounts.token_program.to_account_info(), 
+        token::Transfer {
+            from: ctx.accounts.user_token_account.to_account_info(), 
+            to: ctx.accounts.stake_token_vault.to_account_info(),
+            authority: ctx.accounts.user.to_account_info()
+        }
+    );
+
+    token::transfer(token_transfer_ctx, amount)?;
 
     Ok(())
 }

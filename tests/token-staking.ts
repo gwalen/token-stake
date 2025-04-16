@@ -2,7 +2,7 @@ import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
 import { TokenStaking } from "../target/types/token_staking";
 import { PublicKey, Connection, Keypair, LAMPORTS_PER_SOL } from "@solana/web3.js";
-import { createAssociatedTokenAccount, createMint, mintTo } from "@solana/spl-token";
+import { createAssociatedTokenAccount, createMint, getAssociatedTokenAddressSync, mintTo } from "@solana/spl-token";
 import { assert } from "chai";
 
 describe("token-staking", () => {
@@ -22,6 +22,7 @@ describe("token-staking", () => {
   let stakeTokenMint: PublicKey;
   let stakeTokenAliceTokenAccount: PublicKey;
   let stakeTokenBobTokenAccount: PublicKey;
+  let poolConfigPda: PublicKey;
 
   const program = anchor.workspace.tokenStaking as Program<TokenStaking>;
   const connection = anchor.getProvider().connection;
@@ -111,11 +112,26 @@ describe("token-staking", () => {
   });
 
   it("Stake user tokens", async () => {
-    let stake_amount = new anchor.BN(10 * STAKE_TOKEN_DECIMALS);
-    let user_lockup_period_sec = new anchor.BN(510); // + 10 to adjust for the pool_config.min_duration
+    let stakeAmount = new anchor.BN(10 * STAKE_TOKEN_DECIMALS);
+    let userLockupPeriodSec = new anchor.BN(510); // + 10 to adjust for the pool_config.min_duration
+    poolConfigPda = derivePoolConfigPda(program.programId, poolOwner.publicKey, stakeTokenMint);
+
+    let aliceStakeTokenAta = getAssociatedTokenAddressSync(
+      stakeTokenMint,
+      alice.publicKey
+    );
+
+    let poolStakeTokenAta = getAssociatedTokenAddressSync(
+      stakeTokenMint,
+      poolConfigPda,
+      true // allow off curve (pda)
+    );
+
+    let userTokenAmountBefore = Number((await connection.getTokenAccountBalance(aliceStakeTokenAta)).value.amount)
+    let poolTokenAmountBefore = Number((await connection.getTokenAccountBalance(poolStakeTokenAta)).value.amount)
 
     let tx = await program.methods
-      .stakeTokens(stake_amount, user_lockup_period_sec)
+      .stakeTokens(stakeAmount, userLockupPeriodSec)
       .accounts({
         user: alice.publicKey,
         poolOwner: poolOwner.publicKey,
@@ -128,10 +144,11 @@ describe("token-staking", () => {
 
     console.log("Stake alice tokens tx sig: ", tx);
 
-    // let stake_token_vault
-
     let userStakePda = deriveUserStakePda(program.programId, alice.publicKey, stakeTokenMint);
     let userStake = await program.account.userStake.fetch(userStakePda);
+
+    let userTokenAmountAfter = Number((await connection.getTokenAccountBalance(aliceStakeTokenAta)).value.amount);
+    let poolTokenAmountAfter = Number((await connection.getTokenAccountBalance(poolStakeTokenAta)).value.amount);
 
     /**
      * Given:
@@ -157,13 +174,13 @@ describe("token-staking", () => {
       8. Result:
       The calculated weight_multiplier for a user locking up 510 seconds is 5.5x.
      */
-
     assert.equal(userStake.weightMultiplier.toNumber() / BIPS, 5.5);
-    // assert.equal(userStake.stakeTokenVault.toBase58(), stakeTokenMint);
-    console.log("User stake multiplier: ", userStake.weightMultiplier.toNumber() / BIPS);
+    assert.equal(userStake.endTime.toNumber(), userStake.startTime.toNumber() + userLockupPeriodSec.toNumber());
     
-
-    
+    let userTokenDiff = Math.abs(userTokenAmountAfter - userTokenAmountBefore);
+    let poolTokenDiff = Math.abs(poolTokenAmountAfter - poolTokenAmountBefore);
+    assert.equal(userTokenDiff, stakeAmount.toNumber());
+    assert.equal(poolTokenDiff, stakeAmount.toNumber());
   });
 
 });
@@ -190,6 +207,18 @@ export function deriveUserStakePda(
 ): PublicKey {
   const [pda] = anchor.web3.PublicKey.findProgramAddressSync(
     [Buffer.from("user_stake"), user.toBuffer(), stake_token_mint.toBuffer()],
+    programId
+  );
+  return pda;
+}
+
+export function derivePoolConfigPda(
+  programId: PublicKey,
+  pool_owner: PublicKey,
+  stake_token_mint: PublicKey
+): PublicKey {
+  const [pda] = anchor.web3.PublicKey.findProgramAddressSync(
+    [Buffer.from("pool_config"), pool_owner.toBuffer(), stake_token_mint.toBuffer()],
     programId
   );
   return pda;

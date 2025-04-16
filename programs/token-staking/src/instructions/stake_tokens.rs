@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use anchor_spl::{associated_token::AssociatedToken, token::{Mint, TokenAccount}};
+use anchor_spl::{associated_token::AssociatedToken, token::{Mint, Token, TokenAccount}};
 
 use crate::state::{pool_config::PoolConfig, user_stake::UserStake};
 
@@ -53,5 +53,6 @@ pub struct StakeTokens<'info> {
     pub user_token_account: Account<'info, TokenAccount>,
 
     pub system_program: Program<'info, System>,
+    pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>
 }
