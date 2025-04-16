@@ -18,7 +18,7 @@ describe("token-staking", () => {
   const alice = Keypair.generate();
   const bob = Keypair.generate();
 
-  const stakeTokenDecimals = 6;
+  const STAKE_TOKEN_DECIMALS = 6;
   let stakeTokenMint: PublicKey;
   let stakeTokenAliceTokenAccount: PublicKey;
   let stakeTokenBobTokenAccount: PublicKey;
@@ -52,7 +52,7 @@ describe("token-staking", () => {
       baseWallet.payer, 
       baseWallet.publicKey, // mint auth
       baseWallet.publicKey, // freeze auth
-      stakeTokenDecimals
+      STAKE_TOKEN_DECIMALS
     );
 
     stakeTokenAliceTokenAccount = await createAssociatedTokenAccount(
@@ -74,7 +74,7 @@ describe("token-staking", () => {
       stakeTokenMint,
       stakeTokenAliceTokenAccount,
       baseWallet.publicKey, // authority
-      100 * 10 ** stakeTokenDecimals,
+      100 * 10 ** STAKE_TOKEN_DECIMALS,
     );
     await mintTo(
       connection,
@@ -82,7 +82,7 @@ describe("token-staking", () => {
       stakeTokenMint,
       stakeTokenBobTokenAccount,
       baseWallet.publicKey, // authority
-      100 * 10 ** stakeTokenDecimals,
+      100 * 10 ** STAKE_TOKEN_DECIMALS,
     );
 
     assert.equal((await connection.getTokenAccountBalance(stakeTokenAliceTokenAccount)).value.amount, "100000000");
@@ -91,7 +91,7 @@ describe("token-staking", () => {
 
   it("Create pool", async () => {
     let min_duration_sec = new anchor.BN(10);
-    let max_duration_sec = new anchor.BN(1000);
+    let max_duration_sec = new anchor.BN(1010); // 1000 + 10 so that we have total max_duration period == 1000
     let max_weight_multiplier = new anchor.BN(10);
 
     let tx = await program.methods
@@ -102,15 +102,75 @@ describe("token-staking", () => {
       })
       .signers([poolOwner])
       .rpc()
-      .catch(e => console.error());
+      .catch(e => console.error(e));
       
     console.log("Create pool tx: ", tx);  
 
+    let user_stake = program.account.userStake.fetch();
+
+  });
+
+  it("Stake user tokens", async () => {
+    let stake_amount = new anchor.BN(10 * STAKE_TOKEN_DECIMALS);
+    let user_lockup_period_sec = new anchor.BN(510); // + 10 to adjust for the pool_config.min_duration
+
+    let tx = await program.methods
+      .stakeTokens(stake_amount, user_lockup_period_sec)
+      .accounts({
+        user: alice.publicKey,
+        poolOwner: poolOwner.publicKey,
+        stakeTokenMint
+      })
+      .signers([alice])
+      // .rpc({ skipPreflight: true });
+      .rpc()
+      .catch(e => console.error(e));
+
+    console.log("Stake alice tokens tx sig: ", tx);
+
+    // let stake_token_vault
+
+    let userStakePda = deriveUserStakePda(program.programId, alice.publicKey, stakeTokenMint);
+    let userStake = await program.account.userStake.fetch(userStakePda);
+
+    /**
+     * Given:
+      pool_config.min_duration_sec = 10
+      pool_config.max_duration_sec = 1010
+      pool_config.max_weight_multiplier = 10 (Assuming this means 10x, not 10 BIPS)
+      user_lockup_period_sec = 510
+      Steps:
+      1. Check if user_lockup_period_sec is within the pool's range:
+      10 <= 510 <= 1010. Yes, it is. So we use user_lockup_period_sec directly (no clamping needed in this case).
+      2. Calculate the total duration range eligible for weight increase:
+      total_duration_range = max_duration - min_duration = 1010 - 10 = 1000 seconds.
+      3. Calculate how far the user's lockup period is into that range:
+      adjusted_lockup_period = user_lockup_period - min_duration = 510 - 10 = 500 seconds.
+      4. Calculate the total possible weight increase above the base 1x:
+      weight_increase_range = max_weight_multiplier - 1 = 10 - 1 = 9.
+      5. Calculate the user's achieved portion of the maximum increase:
+      increase_ratio = adjusted_lockup_period / total_duration_range = 500 / 1000 = 0.5. (The user locked up for exactly half of the duration range).
+      6. Calculate the actual weight increase for the user:
+      actual_increase = weight_increase_range * increase_ratio = 9 * 0.5 = 4.5.
+      7. Add the base weight (1x) to the actual increase:
+      weight_multiplier = 1 + actual_increase = 1 + 4.5 = 5.5.
+      8. Result:
+      The calculated weight_multiplier for a user locking up 510 seconds is 5.5x.
+     */
+
+    assert.equal(userStake.weightMultiplier.toNumber() / BIPS, 5.5);
+    // assert.equal(userStake.stakeTokenVault.toBase58(), stakeTokenMint);
+    console.log("User stake multiplier: ", userStake.weightMultiplier.toNumber() / BIPS);
+    
+
+    
   });
 
 });
 
 export const AIRDROP_SOL_AMOUNT = 333 * LAMPORTS_PER_SOL;
+
+export const BIPS = 10_000;
 
 export async function airdrop(connection: Connection, userPubkey: PublicKey) {
   const signature = await connection.requestAirdrop(userPubkey, AIRDROP_SOL_AMOUNT)
@@ -121,4 +181,16 @@ export async function airdrop(connection: Connection, userPubkey: PublicKey) {
       lastValidBlockHeight: latestBlockHash.lastValidBlockHeight,
       signature: signature,
   });
+}
+
+export function deriveUserStakePda(
+  programId: PublicKey,
+  user: PublicKey,
+  stake_token_mint: PublicKey
+): PublicKey {
+  const [pda] = anchor.web3.PublicKey.findProgramAddressSync(
+    [Buffer.from("user_stake"), user.toBuffer(), stake_token_mint.toBuffer()],
+    programId
+  );
+  return pda;
 }

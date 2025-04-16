@@ -28,7 +28,7 @@ pub struct PoolCreate<'info> {
         init_if_needed,
         payer = owner,
         associated_token::mint = stake_token_mint,
-        associated_token::authority = owner
+        associated_token::authority = pool_config
     )]
     pub stake_token_vault: Account<'info, TokenAccount>,
 

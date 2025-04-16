@@ -3,6 +3,7 @@ use anchor_lang::prelude::*;
 pub mod state;
 pub mod instructions;
 pub mod handlers;
+pub mod utils;
 
 use instructions::pool_create::*;
 use instructions::stake_tokens::*;
@@ -32,15 +33,19 @@ pub mod token_staking {
         pool_create::handle(ctx, min_duration, max_duration, max_wight_multiplier)
     }
 
-    // pub fn pool_deposit(ctx: Context<PoolDeposit>) -> Result<()> {
+    // pub fn deposit_rewards() -> Result<()> {
     //     Ok(())
     // }
 
     // *** user instructions
 
-    // pub fn stake(ctx: Context<StakeTokens>, amount: u64, lock_period: u64) -> Result<()> {
-    //     Ok(())
-    // }
+    pub fn stake_tokens(
+        ctx: Context<StakeTokens>, 
+        amount: u64, 
+        lockup_period: u64
+    ) -> Result<()> {
+        stake_tokens::handler(ctx, amount, lockup_period)
+    }
 
     // pub fn unstake(ctx: Context<UnstakeTokens>) -> Result<()> {
     //     Ok(())
