@@ -9,8 +9,10 @@ pub struct PoolConfig {
     pub min_duration: u64,
     pub max_duration: u64,
     pub max_wight_multiplier: u64,
-    #[max_len(10)]
-    pub reward_distributions: Vec<Pubkey>
+    // total_amount -> this we do not need to store in variable as we can just check the amount of tokens in the vault
+    // This is weighted amount of tokens in the pool (we need a separate variable for it as it is a sum of all users weighted amounts)
+    pub total_weighted_amount: u64,
+    pub reward_distributor: Pubkey
 }
 
 impl PoolConfig {

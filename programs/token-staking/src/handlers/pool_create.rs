@@ -20,7 +20,8 @@ pub fn handle(
         min_duration,
         max_duration,
         max_wight_multiplier,
-        reward_distributions: Vec::new()
+        total_weighted_amount: 0,
+        reward_distributor: Pubkey::default()
     });
 
     Ok(())

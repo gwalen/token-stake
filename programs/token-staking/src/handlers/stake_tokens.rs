@@ -23,13 +23,16 @@ pub fn handler(
 
     msg!("XXX - User multiplier: {}", user_weight_multiplier);
 
+    // TODO: add uplifting SOL -> WSOL and flag for is_sol_stake transfer (?)
+
     let user_stake = ctx.accounts.user_stake.borrow_mut();
     user_stake.set_inner(UserStake {
         owner: ctx.accounts.user.key(),
         pool_config: ctx.accounts.pool_config.key(),
         start_time: lock_period_start,
         end_time: lock_period_start + lockup_period,
-        weight_multiplier: user_weight_multiplier
+        weight_multiplier: user_weight_multiplier, 
+        amount
     });
 
     let token_transfer_ctx = CpiContext::new(

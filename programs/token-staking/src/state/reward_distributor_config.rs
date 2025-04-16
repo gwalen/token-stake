@@ -6,7 +6,7 @@ pub struct RewardDistributorConfig {
     pub owner: Pubkey,
     pub pool_config: Pubkey,
     pub reward_token_mint: Pubkey,
-    pub reward_token_vault: Pubkey,
+    // pub reward_token_vault: Pubkey,
     // in sec
     pub emission_rate: u64
 }
