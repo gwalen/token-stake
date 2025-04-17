@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::{associated_token::AssociatedToken, token::{Mint, Token, TokenAccount}};
 
-use crate::state::{pool_config::PoolConfig, user_stake::UserStake};
+use crate::{state::{pool_config::PoolConfig, user_stake::UserStake}, utils::errors::StakeProgramErrors};
 
 #[derive(Accounts)]
 pub struct StakeTokens<'info> {
@@ -9,19 +9,20 @@ pub struct StakeTokens<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
     
-    /// CHECK: pool_owner account used to seed generation (it is a publicly available account)
-    pub pool_owner: UncheckedAccount<'info>,
-
+    // #[account(
+        // constraint = stake_token_mint.key() == pool_config.stake_token_mint.key() @ StakeProgramErrors::InvalidStakeToken
+        // as alternative has_one was used in pool_config definition
+    // )]
     pub stake_token_mint: Account<'info, Mint>,
 
     #[account(
         seeds = [
             PoolConfig::SEED_PREFIX,
-            &pool_owner.key().to_bytes(),
-            &stake_token_mint.key().to_bytes()
+            &pool_config.owner.key().to_bytes(),
+            &pool_config.stake_token_mint.key().to_bytes()
         ],
-        bump
-
+        bump,
+        has_one = stake_token_mint @ StakeProgramErrors::InvalidStakeToken 
     )]
     pub pool_config: Account<'info, PoolConfig>,
 

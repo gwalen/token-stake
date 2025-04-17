@@ -8,5 +8,9 @@ pub enum StakeProgramErrors {
     #[msg("Lockup period is less than minimum value")]
     LockupPeriodLessThanMin,
     #[msg("Lockup period is bigger than max value")]
-    LockupPeriodBiggerThaMax
+    LockupPeriodBiggerThaMax,
+    #[msg("Invalid pool owner")]
+    InvalidPoolOwner,
+    #[msg("Invalid stake token")]
+    InvalidStakeToken
 }

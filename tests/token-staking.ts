@@ -134,7 +134,8 @@ describe("token-staking", () => {
       .stakeTokens(stakeAmount, userLockupPeriodSec)
       .accounts({
         user: alice.publicKey,
-        poolOwner: poolOwner.publicKey,
+        // @ts-ignore
+        poolConfig: poolConfigPda,
         stakeTokenMint
       })
       .signers([alice])
