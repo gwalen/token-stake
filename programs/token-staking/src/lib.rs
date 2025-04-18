@@ -7,6 +7,7 @@ pub mod utils;
 
 use instructions::pool_create::*;
 use instructions::stake_tokens::*;
+use instructions::reward_distributor_create::*;
 
 use handlers::*;
 
@@ -33,7 +34,14 @@ pub mod token_staking {
         pool_create::handle(ctx, min_duration, max_duration, max_wight_multiplier)
     }
 
-    // pub fn deposit_rewards() -> Result<()> {
+    pub fn create_reward_distributor(
+        ctx: Context<RewardDistributorCreate>,
+        emission_rate: u64
+    ) -> Result<()> {
+      reward_distributor_create::handler(ctx, emission_rate)   
+    }
+
+    // pub fn deposit_rewards_to_pool() -> Result<()> {
     //     Ok(())
     // }
 

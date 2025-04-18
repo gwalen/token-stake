@@ -26,7 +26,7 @@ pub struct StakeTokens<'info> {
     )]
     pub pool_config: Account<'info, PoolConfig>,
 
-    // NOTE: init here gives us gurantee that there will be just one such user_stake account, 
+    // NOTE: init here gives us guarantee that there will be just one such user_stake account, 
     // which also means that user can stake() tokens to given poll only once (!)
     // TODO:2: think how to do if we want to have allow user to stake() several times.
     //         This would mean updating the lockup-period new total user stake tokens amount (?) and probably we need to pay out the rewards first (?)

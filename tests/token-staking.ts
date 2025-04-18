@@ -4,6 +4,7 @@ import { TokenStaking } from "../target/types/token_staking";
 import { PublicKey, Connection, Keypair, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { createAssociatedTokenAccount, createMint, getAssociatedTokenAddressSync, mintTo } from "@solana/spl-token";
 import { assert } from "chai";
+import { rpc } from "@coral-xyz/anchor/dist/cjs/utils";
 
 describe("token-staking", () => {
   // Configure the client to use the local cluster.
@@ -18,8 +19,10 @@ describe("token-staking", () => {
   const alice = Keypair.generate();
   const bob = Keypair.generate();
 
+  const REWARD_TOKEN_DECIMALS = 6;
   const STAKE_TOKEN_DECIMALS = 6;
   let stakeTokenMint: PublicKey;
+  let rewardTokenMint: PublicKey;
   let stakeTokenAliceTokenAccount: PublicKey;
   let stakeTokenBobTokenAccount: PublicKey;
   let poolConfigPda: PublicKey;
@@ -106,9 +109,6 @@ describe("token-staking", () => {
       .catch(e => console.error(e));
       
     console.log("Create pool tx: ", tx);  
-
-    let user_stake = program.account.userStake.fetch();
-
   });
 
   it("Stake user tokens", async () => {
@@ -182,6 +182,32 @@ describe("token-staking", () => {
     let poolTokenDiff = Math.abs(poolTokenAmountAfter - poolTokenAmountBefore);
     assert.equal(userTokenDiff, stakeAmount.toNumber());
     assert.equal(poolTokenDiff, stakeAmount.toNumber());
+  });
+
+  it("Create reward distributor", async () => {
+    const emission_rate = new anchor.BN(1000); // 1000 per sec
+
+    rewardTokenMint = await createMint(
+      connection,
+      poolOwner,
+      poolOwner.publicKey, // mint auth
+      poolOwner.publicKey, // freeze auth
+      REWARD_TOKEN_DECIMALS
+    );
+
+    const tx = await program.methods
+      .createRewardDistributor(emission_rate)
+      .accounts({
+        poolOwner: poolOwner.publicKey,
+        rewardTokenMint,
+        // @ts-ignore
+        poolConfig: poolConfigPda
+      })
+      .signers([poolOwner])
+      .rpc()
+      .catch(e => console.error(e));
+
+    console.log("Create reward distributor tx: ", tx);  
   });
 
 });

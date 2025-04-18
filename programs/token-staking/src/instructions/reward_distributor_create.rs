@@ -5,7 +5,7 @@ use crate::{state::{pool_config::PoolConfig, reward_distributor_config::RewardDi
 
 
 #[derive(Accounts)]
-pub struct CreateRewardDistributor<'info> {
+pub struct RewardDistributorCreate<'info> {
 
     #[account(
         mut,
@@ -19,8 +19,8 @@ pub struct CreateRewardDistributor<'info> {
         mut, // we will set the reward distributor account in pool config
         seeds = [
             PoolConfig::SEED_PREFIX,
-            &pool_config.key().to_bytes(),
-            &pool_config.key().to_bytes()
+            &pool_config.owner.key().to_bytes(),
+            &pool_config.stake_token_mint.key().to_bytes()
         ],
         bump // TODO: save bump for the PoolConfig and other account to minimize the CU amount used
     )]
@@ -29,16 +29,15 @@ pub struct CreateRewardDistributor<'info> {
     #[account(
         init,
         payer = pool_owner,
-        space = RewardDistributorConfig::INIT_SPACE,
+        space = RewardDistributorConfig::LEN,
         seeds = [
             RewardDistributorConfig::SEED_PREFIX,
-            
+            &pool_config.key().to_bytes(),
+            &reward_token_mint.key().to_bytes()
         ],
         bump
     )]
     pub reward_distributor_config: Account<'info, RewardDistributorConfig>,
 
     pub system_program: Program<'info, System>,
-    
-
 }

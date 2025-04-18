@@ -12,5 +12,9 @@ pub enum StakeProgramErrors {
     #[msg("Invalid pool owner")]
     InvalidPoolOwner,
     #[msg("Invalid stake token")]
-    InvalidStakeToken
+    InvalidStakeToken,
+    #[msg("Emission is zero")]
+    EmissionRateZero,
+    #[msg("Redeclaration of reward distributor")]
+    RedeclarationOfRewardDistributor
 }
